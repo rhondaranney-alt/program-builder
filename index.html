@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Josh Cavalier — AI Training Program Builder</title>
+<style>
+/* ── RESET + VARIABLES ─────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --H:#0F1B37;   /* Himalayan Night */
+  --T:#3CB8B6;   /* Thin Air        */
+  --R:#8B1D29;   /* Rakkan Red      */
+  --S:#DF6526;   /* Saffron Ember   */
+  --F:#F39E26;   /* First Light     */
+  --bg:#F5F5F3;
+  --white:#fff;
+  --dark:#1A1A1A;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --fF:#0F1B37;
+  --fV:#8B1D29;
+  --fA:#DF6526;
+  --fW:#3CB8B6;
+  --fG:#F39E26;
+  --fL:#5B6FA8;
+  --hdr:60px;
+  --bar:3px;
+  --radius:10px;
+}
+
+@font-face{
+  font-family:'SS3';
+  src:url('_brand/fonts/Inter,Lexend,Source_Sans_3/Source_Sans_3/SourceSans3-VariableFont_wght.ttf') format('truetype');
+  font-weight:100 900;font-style:normal;
+}
+
+body{
+  font-family:'SS3',system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--dark);
+  padding-top:calc(var(--hdr) + var(--bar));
+  line-height:1.6;min-height:100vh;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── STICKY HEADER ─────────────────────────────────────────────────────── */
+.hdr{
+  position:fixed;top:0;left:0;right:0;height:var(--hdr);
+  background:var(--H);z-index:1000;
+  display:flex;align-items:center;padding:0 20px;gap:20px;
+  box-shadow:0 2px 20px rgba(0,0,0,.25);
+}
+.brand{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+.bmark{
+  width:28px;height:28px;
+  background:var(--S);
+  clip-path:polygon(50% 0%,0% 100%,100% 100%);
+  flex-shrink:0;
+}
+.bname{font-size:13px;font-weight:800;color:white;letter-spacing:-.01em;white-space:nowrap;}
+.steps-nav{display:flex;align-items:center;flex:1;justify-content:center;gap:0;}
+.sn-item{display:flex;align-items:center;gap:0;cursor:default;}
+.sn-item.back{cursor:pointer;}
+.sn-inner{display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;transition:background .15s;}
+.sn-item.back .sn-inner:hover{background:rgba(255,255,255,.08);}
+.sn-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:rgba(255,255,255,.12);color:rgba(255,255,255,.4);transition:all .2s;flex-shrink:0;}
+.sn-item.done .sn-dot{background:var(--T);color:white;}
+.sn-item.active .sn-dot{background:var(--S);color:white;}
+.sn-lbl{font-size:11px;font-weight:600;color:rgba(255,255,255,.4);white-space:nowrap;transition:color .2s;}
+.sn-item.done .sn-lbl,.sn-item.active .sn-lbl{color:white;}
+.sn-arr{font-size:12px;color:rgba(255,255,255,.2);padding:0 2px;}
+
+.progbar{position:fixed;top:var(--hdr);left:0;right:0;height:var(--bar);background:rgba(255,255,255,.08);z-index:999;}
+.progfill{height:100%;background:linear-gradient(90deg,var(--T),var(--S));transition:width .4s ease;}
+
+/* ── STEP CONTAINERS ───────────────────────────────────────────────────── */
+.step{display:none;animation:fadeIn .3s ease;}
+.step.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes popIn{from{transform:scale(0) rotate(-10deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(110%)}}
+
+.wrap{max-width:1080px;margin-inline:auto;padding:0 22px;}
+.sec-label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--S);margin-bottom:6px;}
+.sec-title{font-size:clamp(22px,3.5vw,36px);font-weight:900;color:var(--H);letter-spacing:-.02em;line-height:1.1;margin-bottom:10px;}
+.sec-sub{font-size:15px;color:var(--muted);max-width:520px;line-height:1.55;}
+
+/* ── STEP 0: WELCOME ───────────────────────────────────────────────────── */
+.hero{background:var(--H);padding:72px 22px 68px;position:relative;overflow:hidden;text-align:center;}
+.hero-bg{position:absolute;inset:0;pointer-events:none;}
+.sh{position:absolute;opacity:.1;}
+.sh-sq{width:160px;height:160px;background:var(--R);top:-45px;left:-35px;transform:rotate(18deg);animation:fl1 9s ease-in-out infinite;}
+.sh-tri{border-left:85px solid transparent;border-right:85px solid transparent;border-bottom:147px solid var(--S);opacity:.1;bottom:-15px;right:70px;animation:fl2 11s ease-in-out infinite;}
+.sh-cir{width:200px;height:200px;border-radius:50%;background:var(--F);top:5px;right:-55px;animation:fl3 13s ease-in-out infinite;}
+.sh-sq2{width:55px;height:55px;background:var(--T);opacity:.06;bottom:50px;left:90px;transform:rotate(30deg);animation:fl1 8s ease-in-out infinite reverse;}
+@keyframes fl1{0%,100%{transform:rotate(18deg) translateY(0)}50%{transform:rotate(18deg) translateY(-12px)}}
+@keyframes fl2{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes fl3{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+
+.hero-in{position:relative;z-index:1;}
+.hero-eye{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--T);margin-bottom:16px;}
+.hero h1{font-size:clamp(30px,5.5vw,58px);font-weight:900;line-height:1.08;letter-spacing:-.025em;color:white;margin-bottom:18px;max-width:680px;margin-inline:auto;}
+.hero h1 em{color:var(--T);font-style:normal;}
+.hero-sub{font-size:17px;color:rgba(255,255,255,.62);max-width:460px;margin-inline:auto;margin-bottom:44px;}
+
+.stats{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:44px;}
+.stat{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);border-radius:12px;padding:18px 24px;text-align:center;min-width:110px;transition:background .2s,transform .2s;cursor:default;}
+.stat:hover{background:rgba(255,255,255,.13);transform:translateY(-2px);}
+.sv{font-size:34px;font-weight:900;color:var(--T);line-height:1;}
+.sl{font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.1em;margin-top:4px;}
+
+.demo-box{display:inline-flex;align-items:flex-start;gap:11px;background:rgba(60,184,182,.1);border:1px solid rgba(60,184,182,.25);border-radius:10px;padding:14px 20px;max-width:510px;margin-inline:auto;text-align:left;}
+.demo-icon{font-size:18px;flex-shrink:0;margin-top:2px;}
+.demo-txt{font-size:13px;color:rgba(255,255,255,.68);line-height:1.55;}
+.demo-txt strong{color:var(--T);}
+.hero-cta{margin-top:36px;}
+.btn-start{display:inline-flex;align-items:center;gap:7px;background:var(--S);color:white;padding:14px 32px;border-radius:8px;font-size:16px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:background .15s,transform .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;min-height:48px;}
+.btn-start:hover{background:#c45522;transform:translateY(-1px);}
+
+/* ── STEP 1: PROCESS ───────────────────────────────────────────────────── */
+.proc-sec{background:white;padding:60px 0 68px;}
+.phase-blk{margin-bottom:36px;}
+.phase-hd{display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--border);}
+.ph-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.ph-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;}
+.ph-range{font-size:12px;color:var(--muted);margin-left:auto;}
+.proc-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+.pc{background:var(--bg);border-radius:var(--radius);padding:15px 17px;border-left:4px solid;transition:transform .15s,box-shadow .15s;}
+.pc:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.08);}
+.pc-n{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:3px;letter-spacing:.06em;}
+.pc-t{font-size:13px;font-weight:700;color:var(--H);margin-bottom:4px;line-height:1.3;}
+.pc-d{font-size:12px;color:var(--muted);line-height:1.45;}
+
+/* ── STEP 2: DAY LENGTH ────────────────────────────────────────────────── */
+.day-sec{padding:60px 0 68px;}
+.day-grid{display:grid;grid-template-columns:1fr;gap:18px;margin-top:36px;}
+.dc{background:white;border:2px solid var(--border);border-radius:14px;padding:26px 26px 22px;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s,box-shadow .2s,transform .2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;}
+.dc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--cc,var(--T));}
+.dc:hover{border-color:var(--cc,var(--T));}
+.dc.sel{border-color:var(--cc,var(--T));}
+.dc-chk{position:absolute;top:13px;right:13px;width:24px;height:24px;border-radius:50%;background:var(--cc,var(--T));color:white;font-size:12px;font-weight:700;line-height:24px;text-align:center;opacity:0;transform:scale(.5);transition:all .2s;}
+.dc.sel .dc-chk{opacity:1;transform:scale(1);}
+.dc-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;}
+.dc-title{font-size:19px;font-weight:800;color:var(--H);margin-bottom:10px;line-height:1.2;}
+.dc-use{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.dc-nums{display:flex;gap:18px;margin-bottom:12px;}
+.dn-v{font-size:22px;font-weight:800;}
+.dn-l{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:1px;}
+.dc-cap{font-size:13px;font-weight:600;padding-top:12px;border-top:1px solid var(--border);}
+
+/* ── STEP 3: MODULES ───────────────────────────────────────────────────── */
+.cap-sticky{
+  position:sticky;top:calc(var(--hdr) + var(--bar));z-index:100;
+  background:white;border-bottom:1px solid var(--border);
+  padding:10px 22px;
+  display:flex;align-items:center;gap:14px;
+}
+.cap-lbl{font-size:12px;font-weight:700;color:var(--H);white-space:nowrap;min-width:100px;}
+.cap-track{flex:1;height:10px;background:var(--border);border-radius:100px;overflow:hidden;}
+.cap-bar{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--T),var(--F));transition:width .3s ease,background .3s ease;width:0%;}
+.cap-bar.w{background:linear-gradient(90deg,var(--F),var(--S));}
+.cap-bar.d{background:linear-gradient(90deg,var(--S),var(--R));}
+.cap-bar.ful{background:var(--R);}
+.cap-txt{font-size:12px;color:var(--muted);white-space:nowrap;min-width:90px;text-align:right;}
+.cap-txt.ful{color:var(--R);font-weight:700;}
+.cap-sel{font-size:11px;font-weight:700;color:var(--T);white-space:nowrap;}
+
+.mod-sec{padding:28px 0 60px;}
+.fam-blk{padding:28px 0 0;}
+.fam-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:11px;border-bottom:2px solid var(--border);}
+.fam-badge{width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:white;flex-shrink:0;}
+.fam-info h3{font-size:15px;font-weight:800;color:var(--H);line-height:1.2;}
+.fam-info p{font-size:12px;color:var(--muted);}
+.fam-cnt{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;}
+
+.mod-grid{display:grid;grid-template-columns:1fr;gap:11px;}
+.mc{
+  background:white;border:2px solid var(--border);border-radius:var(--radius);
+  padding:14px 15px 13px 19px;cursor:pointer;position:relative;
+  transition:border-color .18s,box-shadow .18s,background .18s;
+  user-select:none;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.mc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:10px 0 0 10px;background:var(--fc,var(--T));}
+.mc:hover:not(.dis):not(.lock){border-color:var(--fc,var(--T));box-shadow:0 4px 14px rgba(0,0,0,.08);}
+.mc.sel{border-color:var(--fc,var(--T));background:color-mix(in srgb,var(--fc,var(--T)) 4%,white);}
+.mc.dis{opacity:.45;cursor:default;}
+.mc.lock{cursor:default;}
+.mc.lock:hover{box-shadow:none;}
+
+.mc-chk{position:absolute;top:9px;right:9px;width:19px;height:19px;border-radius:50%;background:var(--fc,var(--T));color:white;font-size:10px;font-weight:800;line-height:19px;text-align:center;opacity:0;transform:scale(.4);transition:all .2s;}
+.mc.sel .mc-chk,.mc.lock .mc-chk{opacity:1;transform:scale(1);}
+.mc.lock .mc-chk{background:var(--H);}
+
+.mc-hd{display:flex;align-items:flex-start;gap:7px;margin-bottom:7px;padding-right:26px;}
+.mc-id{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:2px 7px;border-radius:4px;white-space:nowrap;margin-top:2px;flex-shrink:0;}
+.mc-title{font-size:13px;font-weight:700;color:var(--H);line-height:1.3;}
+.mc-meta{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;}
+.mb{font-size:10px;font-weight:600;padding:2px 7px;border-radius:100px;}
+.mb-dur{background:rgba(15,27,55,.07);color:var(--H);}
+.mb-lvl{background:rgba(60,184,182,.12);color:#2a9694;}
+.mb-core{background:var(--H);color:white;}
+.mb-found{background:rgba(15,27,55,.12);color:var(--H);border:1px solid rgba(15,27,55,.25);}
+.mb-soon{background:rgba(139,29,41,.1);color:var(--R);}
+.mb-pre{background:rgba(223,101,38,.12);color:var(--S);font-weight:700;}
+.mc-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+
+/* ── STEP 4: WORKSHOP ──────────────────────────────────────────────────── */
+.ws-hero{background:var(--H);padding:52px 22px 48px;text-align:center;color:white;}
+.ws-icon{font-size:52px;animation:popIn .55s cubic-bezier(.34,1.56,.64,1);display:inline-block;margin-bottom:12px;}
+.ws-hero h2{font-size:clamp(22px,3.5vw,32px);font-weight:900;margin-bottom:7px;letter-spacing:-.02em;}
+.ws-hero p{font-size:15px;color:rgba(255,255,255,.62);}
+
+.ws-body{padding:44px 0 48px;}
+.ws-grid{display:grid;grid-template-columns:1fr;gap:24px;margin-bottom:28px;}
+
+.ws-panel h3{font-size:14px;font-weight:800;color:var(--H);margin-bottom:13px;}
+.ag-item{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);}
+.ag-time{font-size:10px;font-weight:700;color:var(--muted);min-width:38px;padding-top:3px;font-variant-numeric:tabular-nums;}
+.ag-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-top:3px;letter-spacing:.04em;}
+.tag-core{background:rgba(15,27,55,.08);color:var(--H);}
+.tag-e{background:rgba(60,184,182,.12);color:#2a9694;}
+.tag-brk{background:rgba(243,158,38,.12);color:#b07600;}
+.tag-act{background:rgba(223,101,38,.12);color:var(--S);}
+.ag-name{font-size:12px;font-weight:600;flex:1;line-height:1.35;color:var(--dark);}
+.ag-dur{font-size:10px;color:var(--muted);white-space:nowrap;padding-top:3px;font-variant-numeric:tabular-nums;}
+
+.oc-item{padding:9px 0;border-bottom:1px solid var(--border);}
+.oc-mod{font-size:10px;font-weight:700;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;}
+.oc-lo{font-size:12px;color:var(--dark);line-height:1.4;}
+.oc-lo::before{content:'→ ';color:var(--T);font-weight:700;}
+
+.next-panel{background:var(--H);border-radius:12px;padding:22px 26px;color:white;}
+.next-title{font-size:13px;font-weight:800;color:var(--F);margin-bottom:14px;}
+.next-steps{display:flex;flex-direction:column;gap:9px;}
+.ns{display:flex;align-items:flex-start;gap:10px;}
+.ns-n{width:20px;height:20px;border-radius:50%;background:rgba(60,184,182,.2);color:var(--T);font-size:9px;font-weight:700;line-height:20px;text-align:center;flex-shrink:0;}
+.ns-t{font-size:12px;color:rgba(255,255,255,.72);line-height:1.5;}
+.ns-t strong{color:white;}
+
+/* ── BOTTOM NAV ────────────────────────────────────────────────────────── */
+.bot-nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center;z-index:500;box-shadow:0 -4px 14px rgba(0,0,0,.06);gap:12px;}
+.bn-hint{font-size:11px;color:var(--muted);}
+.bn-btns{display:flex;gap:10px;justify-content:center;}
+.btn{padding:12px 28px;border-radius:8px;font-size:15px;font-weight:700;border:1.5px solid var(--border);background:transparent;color:var(--dark);cursor:pointer;font-family:inherit;transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;min-height:48px;min-width:120px;}
+.btn:hover{border-color:var(--T);color:var(--T);}
+.btn.pri{background:var(--S);border-color:var(--S);color:white;}
+.btn.pri:hover{background:#c45522;border-color:#c45522;}
+.btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
+
+/* ── TOAST ─────────────────────────────────────────────────────────────── */
+.toast-wrap{position:fixed;bottom:66px;right:18px;z-index:2000;display:flex;flex-direction:column;gap:7px;align-items:flex-end;pointer-events:none;}
+.toast{background:var(--H);color:white;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;max-width:280px;box-shadow:0 4px 18px rgba(0,0,0,.2);animation:slideIn .28s ease;border-left:3px solid var(--T);}
+.toast.warn{border-left-color:var(--R);}
+
+/* ── RESPONSIVE — mobile-first ─────────────────────────────────────────── */
+/* Base styles above = mobile. Desktop upgrades at 640px and 900px.       */
+
+/* Hide step labels and hint text on mobile — shown at 640px+             */
+.sn-lbl{display:none;}
+.bn-hint{display:none;}
+
+/* Mobile: compact stats */
+.stats{gap:10px;}
+.stat{padding:13px 16px;min-width:80px;}
+.sv{font-size:26px;}
+
+/* Mobile: hero tighter */
+.hero{padding:52px 18px 48px;}
+.hero-sub{font-size:15px;margin-bottom:32px;}
+
+/* Mobile: sections less padding */
+.proc-sec{padding:40px 0 48px;}
+.day-sec{padding:40px 0 48px;}
+.mod-sec{padding:20px 0 80px;}
+.ws-body{padding:28px 0 80px;}
+
+/* Mobile: wrap tighter */
+.wrap{padding:0 16px;}
+
+/* Mobile: cap sticky — compact */
+.cap-sticky{padding:8px 14px;gap:8px;}
+.cap-lbl{min-width:auto;font-size:11px;}
+.cap-txt{min-width:70px;font-size:11px;}
+.cap-sel{font-size:10px;}
+
+/* Mobile: nav centered, buttons natural width */
+.bot-nav{justify-content:center;}
+.bn-btns{gap:10px;}
+.btn{min-width:130px;padding:13px 24px;font-size:15px;}
+
+/* Mobile: module cards larger touch target */
+.mc{padding:14px 14px 14px 20px;}
+.mc-chk{width:24px;height:24px;line-height:24px;font-size:12px;top:11px;right:11px;}
+
+/* Mobile: day cards less padding */
+.dc{padding:20px 20px 18px;}
+
+/* Mobile: toast — wider and lower to clear nav */
+.toast-wrap{right:12px;left:12px;bottom:72px;align-items:stretch;}
+.toast{max-width:100%;}
+
+/* ── 640px — tablet portrait and up ────────────────────────────────────── */
+@media(min-width:640px){
+  .sn-lbl{display:block;}
+  .bn-hint{display:block;}
+  .stats{gap:14px;}
+  .stat{padding:18px 24px;min-width:110px;}
+  .sv{font-size:34px;}
+  .hero{padding:72px 22px 68px;}
+  .hero-sub{font-size:17px;margin-bottom:44px;}
+  .proc-sec{padding:60px 0 68px;}
+  .day-sec{padding:60px 0 68px;}
+  .mod-sec{padding:28px 0 60px;}
+  .ws-body{padding:44px 0 48px;}
+  .wrap{padding:0 22px;}
+  .cap-sticky{padding:10px 22px;gap:14px;}
+  .cap-lbl{min-width:100px;font-size:12px;}
+  .cap-txt{min-width:90px;font-size:12px;}
+  .cap-sel{font-size:11px;}
+  .bot-nav{padding:12px 22px;justify-content:center;}
+  .bn-btns{gap:10px;}
+  .btn{min-width:auto;padding:12px 28px;font-size:15px;}
+  .mc{padding:14px 15px 13px 19px;}
+  .mc-chk{width:19px;height:19px;line-height:19px;font-size:10px;top:9px;right:9px;}
+  .dc{padding:26px 26px 22px;}
+  .toast-wrap{right:18px;left:auto;bottom:66px;align-items:flex-end;}
+  .toast{max-width:280px;}
+  .proc-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));}
+}
+
+/* ── 900px — desktop ────────────────────────────────────────────────────── */
+@media(min-width:900px){
+  .day-grid{grid-template-columns:repeat(3,1fr);}
+  .mod-grid{grid-template-columns:repeat(auto-fill,minmax(288px,1fr));}
+  .ws-grid{grid-template-columns:1fr 1fr;}
+  .mc:hover:not(.dis):not(.lock){transform:translateY(-2px);}
+  .dc:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1);}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="brand">
+    <div class="bmark"></div>
+    <span class="bname">Josh Cavalier</span>
+  </div>
+  <nav class="steps-nav" id="steps-nav"></nav>
+</header>
+<div class="progbar"><div class="progfill" id="progfill"></div></div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- ── STEP 0: WELCOME ──────────────────────────────────────── -->
+<section class="step" id="s0">
+  <div class="hero">
+    <div class="hero-bg">
+      <div class="sh sh-sq"></div><div class="sh sh-tri"></div>
+      <div class="sh sh-cir"></div><div class="sh sh-sq2"></div>
+    </div>
+    <div class="hero-in">
+      <p class="hero-eye">AI Skills Training &nbsp;·&nbsp; Interactive Program Builder</p>
+      <h1>Build Your <em>Custom</em><br>AI Training Day</h1>
+      <p class="hero-sub">45+ modular sessions across 6 practice areas. Pick your day format, choose your modules, and walk away with a full custom agenda.</p>
+      <div class="stats">
+        <div class="stat"><div class="sv">45+</div><div class="sl">Modules</div></div>
+        <div class="stat"><div class="sv">3</div><div class="sl">Day Shells</div></div>
+        <div class="stat"><div class="sv">~27h</div><div class="sl">Total Content</div></div>
+      </div>
+      <div class="demo-box">
+        <div class="demo-icon">🗺</div>
+        <div class="demo-txt">
+          <strong>5-step builder:</strong> See the engagement process → pick a day length → choose modules with live prereq &amp; time enforcement → get a full agenda and learning outcomes. <strong>← → arrow keys</strong> navigate between steps.
+        </div>
+      </div>
+      <div class="hero-cta">
+        <button class="btn-start" onclick="go(1)">Start Building &nbsp;→</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STEP 1: PROCESS ──────────────────────────────────────── -->
+<section class="step" id="s1">
+  <div class="proc-sec">
+    <div class="wrap">
+      <p class="sec-label">Engagement Model</p>
+      <h2 class="sec-title">The 11-Step Process</h2>
+      <p class="sec-sub">Every engagement follows the same pipeline — from first intake to 30-day delta report. Color-coded by phase.</p>
+      <div id="proc-body" style="margin-top:36px;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STEP 2: DAY LENGTH ────────────────────────────────────── -->
+<section class="step" id="s2">
+  <div class="day-sec">
+    <div class="wrap">
+      <p class="sec-label">Step 1 of 3</p>
+      <h2 class="sec-title">Choose Your Day Length</h2>
+      <p class="sec-sub">Day length sets the timing shell and module time budget. Foundation modules are pre-selected but can be adjusted in the next step based on client need.</p>
+      <div class="day-grid" id="day-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STEP 3: PICK MODULES ──────────────────────────────────── -->
+<section class="step" id="s3">
+  <div class="cap-sticky" id="cap-sticky">
+    <span class="cap-lbl">Session Time</span>
+    <div class="cap-track"><div class="cap-bar" id="cap-bar"></div></div>
+    <span class="cap-txt" id="cap-txt">0 min</span>
+    <span class="cap-sel" id="cap-sel"></span>
+  </div>
+  <div class="mod-sec">
+    <div class="wrap">
+      <p class="sec-label">Step 2 of 3</p>
+      <h2 class="sec-title">Pick Your Modules</h2>
+      <p class="sec-sub">Build your session your way — click any topic to add or remove it. Foundation modules are pre-selected but fully adjustable. Topics gray out only when the shell time is full.</p>
+      <div id="fam-body"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STEP 4: YOUR WORKSHOP ─────────────────────────────────── -->
+<section class="step" id="s4">
+  <div class="ws-hero">
+    <div class="ws-icon">&#x2705;</div>
+    <h2>Your Custom Workshop</h2>
+    <p id="ws-sub">Full agenda, learning outcomes, and what happens next.</p>
+  </div>
+  <div class="ws-body">
+    <div class="wrap">
+      <div class="ws-grid" id="ws-grid"></div>
+      <div id="ws-next"></div>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM NAV -->
+<div class="bot-nav" id="bot-nav" style="display:none">
+  <span class="bn-hint">&#8592; &#8594; arrow keys to navigate</span>
+  <div class="bn-btns">
+    <button class="btn" id="btn-back" onclick="go(APP.step-1)">&#8592; Back</button>
+    <button class="btn pri" id="btn-next">Next &#8594;</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════════════ */
+
+const PHASES = [
+  { name:'Discovery', color:'#3CB8B6', range:'Steps 1–3',
+    steps:[
+      { n:'01', t:'Run Intake', d:'Complete all five intake files — AI journey, tool access, policy, and use cases. Understand the client\'s reality before designing anything.' },
+      { n:'02', t:'Pick Day Length', d:'Decide 4h / 6h / 8h based on client preference, budget, and scope. This determines the module time budget and agenda shell.' },
+      { n:'03', t:'Select Modules', d:'Apply six selection rules: core in, prereqs satisfied, tool access confirmed, policy permits, use cases match, skill levels align.' },
+    ]
+  },
+  { name:'Design', color:'#DF6526', range:'Steps 4–6',
+    steps:[
+      { n:'04', t:'Map Use Cases to Activities', d:'For each selected module, pick which client use case fuels the hands-on activity. Real client artifacts become activity inputs.' },
+      { n:'05', t:'Slot into Timing Shell', d:'Paste selected modules into the appropriate timing shell. Follow slot rules for the chosen day length.' },
+      { n:'06', t:'Pull Learning Objectives', d:'Extract LOs for each module in the agenda. Only selected modules contribute to the confidence survey.' },
+    ]
+  },
+  { name:'Delivery', color:'#F39E26', range:'Steps 7–9',
+    steps:[
+      { n:'07', t:'Build the Pre-Survey', d:'Use the confidence template. Insert only the LOs from Step 6. Deploy 1–2 weeks before the workshop to capture baseline.' },
+      { n:'08', t:'Deliver the Workshop', d:'Run sessions with client real work as the activity fuel. Learners leave with progress on actual tasks, not throwaway exercises.' },
+      { n:'09', t:'Run the Post-Survey', d:'Same template, same LOs. Deploy at end of workshop before learners log off. Captures the immediate learning delta.' },
+    ]
+  },
+  { name:'Measurement', color:'#8B1D29', range:'Steps 10–11',
+    steps:[
+      { n:'10', t:'30-Day Follow-Up', d:'Same template plus transfer questions. Did learners actually use this on the job in the last 30 days? Kirkpatrick Level 3.' },
+      { n:'11', t:'Generate the Delta Report', d:'Compare pre / post / 30-day. Tie deltas to client success criteria and Kirkpatrick Levels 1–3. Deliver to the client.' },
+    ]
+  }
+];
+
+const SHELLS = {
+  '4h':{ label:'Half-Day', title:'4-Hour Half-Day', color:'#3CB8B6',
+    total:240, core:180, elec:60,
+    desc:'Executive briefings, pilot cohorts, lunch-and-learn introductions.',
+    agenda:[
+      { tp:'core', id:'F1', lbl:'Opening (compressed)',                   dur:15 },
+      { tp:'core', id:'F2', lbl:'LLM Platform Orientation (compressed)',  dur:25 },
+      { tp:'core', id:'F3', lbl:'Prompt Engineering TRACI+ (compressed)', dur:35 },
+      { tp:'brk',           lbl:'Break',                                  dur:10 },
+      { tp:'core', id:'F4', lbl:'Context Engineering (compressed)',       dur:45 },
+      { tp:'core', id:'F5', lbl:'Capstone: Build Something (mini)',       dur:45 },
+      { tp:'brk',           lbl:'Break',                                  dur:10 },
+      { tp:'act',           lbl:'Show & Tell / Debrief',                  dur:30 },
+      { tp:'core', id:'F6', lbl:'Closing & Action Planning',              dur:15 },
+      { tp:'act',           lbl:'Post-Survey + Resources',                dur:10 },
+    ]
+  },
+  '6h':{ label:'Full Day', title:'6-Hour Day', color:'#DF6526',
+    total:360, core:240, elec:60,
+    desc:'Mid-sized teams, time-constrained orgs, single-day intensives.',
+    agenda:[
+      { tp:'core', id:'F1', lbl:'Opening: Welcome & AI Role Mapping',  dur:20 },
+      { tp:'core', id:'F2', lbl:'LLM Platform Orientation',            dur:40 },
+      { tp:'core', id:'F3', lbl:'Prompt Engineering with TRACI+',      dur:45 },
+      { tp:'brk',           lbl:'Break',                               dur:15 },
+      { tp:'core', id:'F4', lbl:'Context Engineering',                 dur:60 },
+      { tp:'eslot',         lbl:'Module Slot 1',                     dur:30 },
+      { tp:'brk',           lbl:'Lunch',                               dur:45 },
+      { tp:'eslot',         lbl:'Module Slot 2',                     dur:30 },
+      { tp:'core', id:'F5', lbl:'Capstone: Build Something',           dur:60 },
+      { tp:'core', id:'F6', lbl:'Closing + Post-Survey',               dur:15 },
+    ]
+  },
+  '8h':{ label:'Deep Dive', title:'8-Hour Day', color:'#F39E26',
+    total:480, core:265, elec:135,
+    desc:'Full L&D teams, multi-use-case engagements, deep dives.',
+    agenda:[
+      { tp:'core', id:'F1', lbl:'Opening: Welcome & AI Role Mapping',  dur:20 },
+      { tp:'core', id:'F2', lbl:'LLM Platform Orientation',            dur:40 },
+      { tp:'core', id:'F3', lbl:'Prompt Engineering with TRACI+',      dur:45 },
+      { tp:'brk',           lbl:'Break 1',                             dur:15 },
+      { tp:'core', id:'F4', lbl:'Context Engineering',                 dur:60 },
+      { tp:'eslot',         lbl:'Module Slot 1',                     dur:45 },
+      { tp:'brk',           lbl:'Lunch',                               dur:45 },
+      { tp:'eslot',         lbl:'Module Slot 2',                     dur:60 },
+      { tp:'eslot',         lbl:'Module Slot 3',                     dur:30 },
+      { tp:'brk',           lbl:'Break 2',                             dur:15 },
+      { tp:'core', id:'F5', lbl:'Capstone: Build Something',           dur:85 },
+      { tp:'brk',           lbl:'Bio Break',                           dur:5  },
+      { tp:'core', id:'F6', lbl:'Closing + Post-Survey',               dur:15 },
+    ]
+  }
+};
+
+const FAMS = {
+  F:{ name:'Foundation', sub:'Recommended baseline — fully customizable based on client need and discovery', color:'#0F1B37', em:'\u{1F3D4}' },
+  V:{ name:'Visual & Multimedia', sub:'L&D, marketing, and creative teams', color:'#8B1D29', em:'\u{1F3A8}' },
+  A:{ name:'Analysis & Writing', sub:'Anyone who drafts documents or synthesizes research', color:'#DF6526', em:'\u{1F4CA}' },
+  W:{ name:'Workflow & Technical', sub:'Teams building automations or exploring AI tooling edges', color:'#3CB8B6', em:'\u2699\uFE0F' },
+  G:{ name:'Governance & Strategy', sub:'Any team navigating AI adoption within an organization', color:'#F39E26', em:'\u{1F6E1}' },
+  L:{ name:'Content Development', sub:'IDs and training teams building, modernizing, and measuring learning content', color:'#5B6FA8', em:'\u{1F4DA}' },
+};
+
+const MODS = [
+  /* Foundation – Recommended Baseline (selectable) */
+  { id:'F1',fam:'F',tp:'B',dur:20,lv:'B/I/A',pre:[],
+    t:'Opening: Welcome & AI Role Mapping',
+    d:'Psychological safety, the Human-AI Role Map exercise, and tone-setting for the day.',
+    lo:'Position AI as augmentation and map your current role to AI capabilities.' },
+  { id:'F2',fam:'F',tp:'B',dur:40,lv:'B/I/A',pre:[],
+    t:'LLM Platform Orientation',
+    d:'What LLMs are and how to navigate your chosen platform. Concept-first with a platform-adapter overlay.',
+    lo:'Navigate Claude (or your chosen LLM) and identify its key interface features.' },
+  { id:'F3',fam:'F',tp:'B',dur:45,lv:'B/I/A',pre:['F2'],
+    t:'Prompt Engineering with TRACI+',
+    d:"Josh's signature structured prompt framework. Teach, apply, iterate, compare before/after.",
+    lo:'Construct a TRACI+ prompt with all five components and compare it to a zero-shot baseline.' },
+  { id:'F4',fam:'F',tp:'B',dur:60,lv:'B/I/A',pre:['F3'],
+    t:'Context Engineering (Claude Projects)',
+    d:'Persistent context via Projects, Custom Instructions, and knowledge documents. Highest-value sustained skill.',
+    lo:'Create a Claude Project with custom instructions and uploaded context documents.' },
+  { id:'F5',fam:'F',tp:'B',dur:85,lv:'B/I/A',pre:['F2','F3','F4'],
+    t:'Capstone: Build Something',
+    d:'Open-ended build project applying all skills. 90/5/5 design ratio. Ends with Show & Tell.',
+    lo:'Build a complete AI-assisted deliverable and present it to peers for feedback.' },
+  { id:'F6',fam:'F',tp:'B',dur:15,lv:'B/I/A',pre:[],
+    t:'Closing: Action Planning & Pulse Check',
+    d:'Individual action planning, one-thing-different-tomorrow, and the post-workshop confidence survey.',
+    lo:'Commit to one concrete AI action before the next work session.' },
+  /* Visual & Multimedia */
+  { id:'V1',fam:'V',tp:'E',dur:60,lv:'I/A',pre:['F3'],
+    t:'Visual Content & Presentations',
+    d:'AI-generated slide decks, brand-aligned layouts, storyboard-to-slide flows. Copilot in PPT, Claude-to-Canva, Gamma.',
+    lo:'Generate a presentation storyboard and convert it to slides using AI tools.' },
+  { id:'V2',fam:'V',tp:'E',dur:30,lv:'I/A',pre:['F3'],
+    t:'Image Generation & Character Consistency',
+    d:'Consistent characters across multiple images. Image prompting fundamentals, brand constraints, accessibility.',
+    lo:'Generate a consistent character set across 3+ images using a defined visual anchor.' },
+  { id:'V3',fam:'V',tp:'E',dur:30,lv:'I/A',pre:['F3'],
+    t:'Video Scripting for AI Avatars',
+    d:"Writing narration at 150 wpm, Mayer's multimedia principles, scene breaks for Synthesia/HeyGen/Descript.",
+    lo:'Write a narration script formatted for AI avatar delivery at correct 150 wpm pacing.' },
+  { id:'V4',fam:'V',tp:'E',dur:45,lv:'I/A',pre:['V1'],
+    t:'Storyboarding for L&D',
+    d:'AI-assisted course storyboards with branching scenarios. Builds on Visual Content — V1 required.',
+    lo:'Build a storyboard with branching scenario logic using AI-assisted scene generation.' },
+  { id:'V5',fam:'V',tp:'E',dur:30,lv:'I/A',pre:['F3'],
+    t:'Data Visualization with LLMs',
+    d:'Turning raw numbers into chart and dashboard visuals with AI prompting.',
+    lo:'Generate a dashboard-ready visualization from raw data using AI prompting.' },
+  /* Analysis & Writing */
+  { id:'A1',fam:'A',tp:'E',dur:30,lv:'I/A',pre:['F3'],
+    t:'Survey & Feedback Analysis',
+    d:'Upload survey data, extract themes, quote-mine representative voices, generate leadership summaries.',
+    lo:'Analyze a set of survey responses and generate a theme-coded executive summary.' },
+  { id:'A2',fam:'A',tp:'E',dur:45,lv:'I/A',pre:['F3'],
+    t:'Research & Synthesis',
+    d:'Multi-source research with citation discipline and hallucination checks.',
+    lo:'Synthesize multiple sources into a structured research summary with citation verification.' },
+  { id:'A3',fam:'A',tp:'E',dur:45,lv:'B/I/A',pre:['F3'],
+    t:'Writing & Editing Workflows',
+    d:'Drafting, editing, tone matching, brand voice alignment. Accessible to all skill levels.',
+    lo:'Rewrite an existing document to match a target tone and brand voice using AI-assisted editing.' },
+  { id:'A4',fam:'A',tp:'E',dur:45,lv:'I/A',pre:['F4'],
+    t:'Data Analysis with LLMs',
+    d:'Spreadsheet analysis, CSV uploads, formula generation, basic statistical summaries.',
+    lo:'Upload a CSV dataset and generate a statistical summary with AI-generated formula assistance.' },
+  { id:'A5',fam:'A',tp:'E',dur:30,lv:'I/A',pre:['F4'],
+    t:'Document QA (Policy, Contracts)',
+    d:'Upload a policy, contract, or report and ask grounded questions. Requires context engineering (F4).',
+    lo:'Upload an org document and conduct a grounded Q&A session with citation verification.' },
+  { id:'X2',fam:'A',tp:'F',dur:0,lv:'I/A',pre:[],
+    t:'Marketing & Comms Use Cases',
+    d:'Domain-specific module set for marketing and communications teams. Reserved slot.',lo:'' },
+  /* Visual & Multimedia — additional */
+  { id:'V6',fam:'V',tp:'E',dur:45,lv:'I/A',pre:['F3'],
+    t:'Storyboard Presentations with AI',
+    d:'Turn a brief or outline into a fully structured narrated slide presentation — scene-by-scene storyboarding, speaker notes, and visual direction generated end-to-end with AI.',
+    lo:'Generate a complete narrated presentation storyboard with scene structure, speaker notes, and visual direction using AI.' },
+  { id:'V7',fam:'V',tp:'E',dur:30,lv:'I/A',pre:['F3'],
+    t:'Consistent Image Packs',
+    d:'Build cohesive visual libraries for training: style-locked characters, scene families, icon sets, and brand-consistent imagery batched with repeatable AI prompting patterns.',
+    lo:'Produce a set of 5+ brand-consistent images using a defined visual anchor and repeatable AI prompting pattern.' },
+  /* Workflow & Technical */
+  { id:'W1',fam:'W',tp:'E',dur:20,lv:'B/I/A',pre:[],
+    t:'AI Ecosystem Comparison',
+    d:'Claude vs Copilot vs ChatGPT vs Gemini at a glance. When to pick which platform.',
+    lo:'Select the most appropriate LLM for a given use case from the major platforms.' },
+  { id:'W2',fam:'W',tp:'E',dur:30,lv:'I/A',pre:[],
+    t:'Workflow Mapping',
+    d:'The trigger \u2192 AI action \u2192 human review \u2192 output framework. Prereq for all automation modules.',
+    lo:'Map an existing workflow and identify at least two AI integration points.' },
+  { id:'W3',fam:'W',tp:'E',dur:45,lv:'I/A',pre:['W2'],
+    t:'Automation Intro (Power Automate / Zapier)',
+    d:'Connecting LLM output to real workflows via Power Automate, Zapier, or Make. Requires W2.',
+    lo:'Build a basic automation connecting an LLM trigger to a real workflow output.' },
+  { id:'W4',fam:'W',tp:'E',dur:60,lv:'A',pre:['F4'],
+    t:'Building Custom Agents / GPTs',
+    d:'Agent design, system prompts, tool use. Platform-agnostic — tool access determines scope.',
+    lo:'Design and deploy a custom AI agent with a defined system prompt and tool use.' },
+  { id:'W5',fam:'L',tp:'E',dur:45,lv:'I/A',pre:['F3'],
+    t:'Vibe Coding Intro',
+    d:'Generate a simple HTML tool with an LLM. Works with Claude Artifacts, Copilot, or any code-capable model.',
+    lo:'Build a functional single-page HTML performance support tool using AI code generation.' },
+  { id:'W9',fam:'L',tp:'E',dur:45,lv:'I/A',pre:['W5'],
+    t:'Vibe-Coded HTML Deliverables',
+    d:'Build self-contained single-file HTML performance support tools — job aids, calculators, and interactive guides — with embedded CSS and JS, zero dependencies, and zero server requirements. Deliver anywhere.',
+    lo:'Ship a polished single-file HTML deliverable with embedded CSS and JavaScript that works offline and requires no build tools.' },
+  { id:'W6',fam:'W',tp:'E',dur:30,lv:'A',pre:['F4'],
+    t:'MCP & Claude Code Awareness',
+    d:'What MCP is, when it matters, and when to hand off to a developer. Awareness-level.',
+    lo:'Explain MCP and identify one use case in your org where it would add value.' },
+  { id:'W7',fam:'W',tp:'E',dur:45,lv:'A',pre:['F4'],
+    t:'API Basics for Non-Developers',
+    d:'What an API is, how to talk to your IT team, when to request API access.',
+    lo:'Describe an API use case in plain language and draft a request to your IT team.' },
+  { id:'W8',fam:'W',tp:'F',dur:60,lv:'A',pre:['W2'],
+    t:'Copilot Studio Deep Dive',
+    d:'For M365-heavy orgs that want a deeper automation track. Reserved slot.',lo:'' },
+  /* Claude Ecosystem Modules */
+  { id:'W10',fam:'W',tp:'E',dur:30,lv:'B/I/A',pre:['F2'],
+    t:'Claude: Web Interface & Projects (Overview)',
+    d:'Beginner-friendly tour of Claude.ai: the chat interface, Projects with custom instructions, knowledge uploads, and AI Skills for the web platform. Tailored to learners using Claude as their primary tool.',
+    lo:'Set up a Claude Project with custom instructions and navigate all key features of the Claude.ai web interface.' },
+  { id:'W11',fam:'W',tp:'E',dur:30,lv:'B/I/A',pre:['F2'],
+    t:'Claude Cowork (Desktop Tool)',
+    d:'Hands-on intro to Claude Cowork — the desktop application for non-developers to automate file tasks, document workflows, and research pipelines without writing code.',
+    lo:'Complete a file-based automation task using Claude Cowork and describe at least two ways it applies to your own workflow.' },
+  { id:'W12',fam:'W',tp:'E',dur:30,lv:'A',pre:['F4'],
+    t:'Claude Code (CLI Awareness)',
+    d:'What Claude Code is, how developers use it for agentic coding from the terminal, and how L&D teams can partner with devs who use it. Awareness-level — no coding required.',
+    lo:'Explain Claude Code\'s role in a development workflow and identify one handoff point relevant to your team.' },
+  { id:'W13',fam:'W',tp:'E',dur:30,lv:'I/A',pre:['W2'],
+    t:'AI Connectors & Tool Integrations',
+    d:'How Claude and other LLMs connect to external apps — MCP servers, Zapier/Make connectors, native integrations, and platform-specific plugins. Matching the right connector to the right LLM and use case.',
+    lo:'Identify the appropriate AI connector for a given workflow and map a basic end-to-end integration using your org\'s tools.' },
+  { id:'W14',fam:'W',tp:'E',dur:45,lv:'I/A',pre:['F4'],
+    t:'Context Engineering Deep Dive',
+    d:'Advanced persistent context patterns: multi-document Projects, system prompt architecture, context window management, and building organizational knowledge bases that scale.',
+    lo:'Design a multi-document Project with a layered system prompt that serves a specific team or use case.' },
+  /* Governance & Strategy */
+  { id:'G1',fam:'G',tp:'E',dur:30,lv:'B/I/A',pre:[],
+    t:'AI Policy Alignment',
+    d:"Work within your org's AI policy. Uses the client's real policy document as source material.",
+    lo:"Identify 3 activities in your daily work that your org's AI policy permits or restricts." },
+  { id:'G2',fam:'G',tp:'E',dur:30,lv:'B/I/A',pre:['F3'],
+    t:'Evaluating AI Output Quality',
+    d:'Hallucination awareness, citation verification, fact-checking practices, when to trust.',
+    lo:'Apply a 3-step output quality check to AI-generated content and document your findings.' },
+  { id:'G3',fam:'G',tp:'E',dur:30,lv:'B/I/A',pre:[],
+    t:'Ethics, Bias & Responsible Use',
+    d:'Practical ethics for day-to-day AI use. Not a philosophy lecture.',
+    lo:'Identify at least two bias risks in a given AI output and apply a mitigation strategy.' },
+  { id:'G4',fam:'G',tp:'E',dur:30,lv:'I/A',pre:[],
+    t:'AI Change Management for Teams',
+    d:'For managers and leads. How to bring teammates along without mandate fatigue.',
+    lo:'Design a two-week AI adoption nudge plan for your direct team.' },
+  { id:'X1',fam:'G',tp:'F',dur:0,lv:'I/A',pre:[],
+    t:'HR-Specific Use Cases',
+    d:'Domain-specific module set for HR teams. Reserved slot.',lo:'' },
+  { id:'X3',fam:'G',tp:'F',dur:0,lv:'I/A',pre:[],
+    t:'Compliance & Legal Use Cases',
+    d:'Domain-specific module set for compliance and legal teams. Reserved slot.',lo:'' },
+  /* L&D Specific */
+  { id:'L1',fam:'L',tp:'E',dur:45,lv:'I/A',pre:['F3'],
+    t:'Converting Legacy Content with AI',
+    d:'Updating existing courses efficiently. Bulk refactors, tone modernization, format translation.',
+    lo:'Modernize a legacy course module using AI-assisted content refactoring.' },
+  { id:'L2',fam:'L',tp:'E',dur:45,lv:'I/A',pre:['F3'],
+    t:'Scenario-Based Assessment Creation',
+    d:"Cathy Moore action mapping with AI. Building decisions with four answer options and rationale.",
+    lo:'Build a branching scenario with four answer options (correct, partial, tempting, wrong) and rationale.' },
+  { id:'L3',fam:'L',tp:'E',dur:30,lv:'B/I/A',pre:['F3'],
+    t:'Accessibility & AODA with AI',
+    d:'WCAG 2.1 AA compliance checks, plain-language rewrites, alt-text generation.',
+    lo:'Run an accessibility audit on existing content and generate AI-assisted remediation.' },
+  { id:'L4',fam:'L',tp:'E',dur:45,lv:'I/A',pre:['F3'],
+    t:'Rise / Storyline / Captivate + AI',
+    d:'Integrating AI output into authoring tool workflows. Handoff best practices.',
+    lo:'Produce AI-generated content formatted for direct import into your authoring tool.' },
+  { id:'L5',fam:'L',tp:'E',dur:30,lv:'B/I/A',pre:['F3'],
+    t:'Learner Persona Development',
+    d:'Generating and validating personas from real learner data.',
+    lo:'Generate three validated learner personas from intake data and apply them to a course design decision.' },
+  { id:'L6',fam:'L',tp:'E',dur:30,lv:'B/I/A',pre:['F3'],
+    t:'Rubric & Objective Generation',
+    d:"Bloom's-tagged learning objectives and assessment rubrics.",
+    lo:"Generate a set of Bloom's-tagged learning objectives and a matching assessment rubric." },
+  { id:'L7',fam:'L',tp:'E',dur:45,lv:'I/A',pre:['F4'],
+    t:'AI for Learning Needs Analysis',
+    d:"Accelerate the analysis phase of ADDIE using AI: synthesize stakeholder inputs, identify skill gaps, generate learner personas from intake data, and draft a training needs report in a fraction of the time.",
+    lo:'Produce a structured training needs analysis using AI-synthesized stakeholder data, gap findings, and recommended learning interventions.' },
+  { id:'L8',fam:'L',tp:'E',dur:30,lv:'B/I/A',pre:['F3'],
+    t:'Pre/Post Survey Design with AI',
+    d:'Build confidence surveys tied directly to learning objectives, deploy pre and post, and use AI to generate the delta report — the Kirkpatrick Level 1/2 measurement layer built into every Josh Cavalier engagement.',
+    lo:'Design a confidence survey from a set of learning objectives and generate an AI-assisted pre/post delta report.' },
+];
+
+const STEP_NAMES = ['Welcome','The Process','Day Length','Pick Modules','Your Workshop'];
+
+/* ══════════════════════════════════════════════════════════════
+   APP STATE
+══════════════════════════════════════════════════════════════ */
+const APP = {
+  step: 0,
+  day: null,
+  sel: new Set(MODS.filter(function(m){return m.tp==='C'||m.tp==='B';}).map(function(m){return m.id;})),
+};
+
+/* ══════════════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════════════ */
+function go(n){
+  if(n<0||n>4) return;
+  if(n>APP.step){
+    for(var i=APP.step;i<n;i++){
+      if(!canFwd(i)){ toast('Complete this step first.','warn'); return; }
+    }
+  }
+  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('s'+n).classList.add('active');
+  APP.step=n;
+  renderHdr(); renderNav();
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(n===1) renderProc();
+  if(n===2) renderDays();
+  if(n===3) renderMods();
+  if(n===4) renderWS();
+}
+
+function canFwd(from){
+  if(from===2) return !!APP.day;
+  return true;
+}
+
+function advance(){
+  if(APP.step===4){ resetAll(); return; }
+  if(!canFwd(APP.step)){ toast('Please select a day length to continue.','warn'); return; }
+  go(APP.step+1);
+}
+
+function resetAll(){
+  APP.step=0; APP.day=null;
+  APP.sel=new Set(MODS.filter(function(m){return m.tp==='C'||m.tp==='B';}).map(function(m){return m.id;}));
+  go(0);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HEADER + NAV
+══════════════════════════════════════════════════════════════ */
+function renderHdr(){
+  var el=document.getElementById('steps-nav');
+  el.innerHTML=STEP_NAMES.map(function(lbl,i){
+    var done=i<APP.step, active=i===APP.step;
+    var cls='sn-item'+(done?' done back':active?' active':'');
+    var arr=i<STEP_NAMES.length-1?'<span class="sn-arr">&#8250;</span>':'';
+    return '<div class="'+cls+'" onclick="'+(done?'go('+i+')':'')+'" title="'+lbl+'">'+
+      '<div class="sn-inner">'+
+      '<div class="sn-dot">'+(done?'&#10003;':i+1)+'</div>'+
+      '<span class="sn-lbl">'+lbl+'</span>'+
+      '</div></div>'+arr;
+  }).join('');
+  document.getElementById('progfill').style.width=(APP.step/(STEP_NAMES.length-1)*100)+'%';
+}
+
+function renderNav(){
+  var nav=document.getElementById('bot-nav');
+  if(APP.step===0){nav.style.display='none';return;}
+  nav.style.display='flex';
+  var nx=document.getElementById('btn-next');
+  nx.disabled=false;
+  if(APP.step===2&&!APP.day) nx.disabled=true;
+  if(APP.step===3){
+    var cnt=getElectives().length;
+    nx.textContent=cnt?'Build My Workshop ('+cnt+' module'+(cnt>1?'s':'')+' added) \u2192':'Build My Workshop \u2192';
+  } else if(APP.step===4){
+    nx.textContent='\u21BA Start Over';
+  } else {
+    nx.textContent='Next \u2192';
+  }
+  nx.onclick=advance;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STEP 1: PROCESS
+══════════════════════════════════════════════════════════════ */
+function renderProc(){
+  document.getElementById('proc-body').innerHTML=PHASES.map(function(ph){
+    return '<div class="phase-blk">'+
+      '<div class="phase-hd">'+
+        '<div class="ph-dot" style="background:'+ph.color+'"></div>'+
+        '<span class="ph-name" style="color:'+ph.color+'">'+ph.name+'</span>'+
+        '<span class="ph-range">'+ph.range+'</span>'+
+      '</div>'+
+      '<div class="proc-grid">'+
+        ph.steps.map(function(s){
+          return '<div class="pc" style="border-left-color:'+ph.color+'">'+
+            '<div class="pc-n">Step '+s.n+'</div>'+
+            '<div class="pc-t">'+s.t+'</div>'+
+            '<div class="pc-d">'+s.d+'</div>'+
+          '</div>';
+        }).join('')+
+      '</div></div>';
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STEP 2: DAY LENGTH
+══════════════════════════════════════════════════════════════ */
+function renderDays(){
+  document.getElementById('day-grid').innerHTML=Object.keys(SHELLS).map(function(k){
+    var s=SHELLS[k], sel=APP.day===k;
+    return '<div class="dc'+(sel?' sel':'')+'" style="--cc:'+s.color+'" onclick="pickDay(\''+k+'\')">'+
+      '<div class="dc-chk">&#10003;</div>'+
+      '<div class="dc-lbl" style="color:'+s.color+'">'+s.label+'</div>'+
+      '<div class="dc-title">'+s.title+'</div>'+
+      '<div class="dc-use">'+s.desc+'</div>'+
+      '<div class="dc-nums">'+
+        '<div><div class="dn-v" style="color:'+s.color+'">'+(s.total/60)+'h</div><div class="dn-l">Total</div></div>'+
+        '<div><div class="dn-v" style="color:'+s.color+'">'+(s.total/60)+'h</div><div class="dn-l">Available</div></div>'+
+        '<div><div class="dn-v" style="color:'+s.color+'">'+s.elec+'m</div><div class="dn-l">Add-on time</div></div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function pickDay(k){
+  APP.day=k;
+  renderDays(); renderNav();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STEP 3: MODULES
+══════════════════════════════════════════════════════════════ */
+function getElectives(){
+  return MODS.filter(function(m){return m.tp==='E'&&APP.sel.has(m.id);});
+}
+function electMin(){
+  return getElectives().reduce(function(s,m){return s+m.dur;},0);
+}
+/* Total of ALL selected modules (Foundation + add-ons) for cap bar display */
+function allUsedMin(){
+  return MODS.filter(function(m){return APP.sel.has(m.id)&&m.tp!=='F';}).reduce(function(s,m){return s+m.dur;},0);
+}
+function capMax(){ return APP.day?SHELLS[APP.day].total:0; }
+
+function prereqOk(mod){
+  return mod.pre.every(function(p){
+    return APP.sel.has(p);
+  });
+}
+
+function updateCapBar(){
+  var used=allUsedMin(), cap=capMax();
+  var pct=cap>0?Math.min(100,used/cap*100):0;
+  var full=cap>0&&used>=cap;
+  var bar=document.getElementById('cap-bar');
+  var txt=document.getElementById('cap-txt');
+  var sel=document.getElementById('cap-sel');
+  bar.style.width=pct+'%';
+  bar.className='cap-bar'+(full?' ful':pct>=88?' d':pct>=65?' w':'');
+  var rem=cap-used;
+  txt.textContent=cap>0?(used+' / '+cap+' min'+(full?' \u2014 Full':rem>0?' ('+rem+'m left)':'')):' ';
+  txt.className='cap-txt'+(full?' ful':'');
+  var tot=MODS.filter(function(m){return APP.sel.has(m.id)&&m.tp!=='F';}).length;
+  sel.textContent=tot?(tot+' topic'+(tot>1?'s':'')+' selected'):'';
+}
+
+function renderMods(){
+  var sy=window.scrollY;
+  var el=document.getElementById('fam-body');
+  el.innerHTML='';
+  ['F','V','A','W','L','G'].forEach(function(fam){
+    var fi=FAMS[fam];
+    var mods=MODS.filter(function(m){return m.fam===fam;});
+    var selectCnt=mods.filter(function(m){return m.tp==='E'||m.tp==='B';}).length;
+    var sec=document.createElement('div');
+    sec.className='fam-blk';
+    sec.innerHTML=
+      '<div class="fam-hd">'+
+        '<div class="fam-badge" style="background:'+fi.color+'">'+fam+'</div>'+
+        '<div class="fam-info"><h3>'+fi.em+' '+fi.name+'</h3><p>'+fi.sub+'</p></div>'+
+        '<span class="fam-cnt">'+selectCnt+' module'+(selectCnt!==1?'s':'')+'</span>'+
+      '</div>'+
+      '<div class="mod-grid" id="mg-'+fam+'"></div>';
+    el.appendChild(sec);
+    var grid=sec.querySelector('#mg-'+fam);
+    mods.forEach(function(m){grid.appendChild(mkCard(m,fi.color));});
+  });
+  updateCapBar();
+  requestAnimationFrame(function(){window.scrollTo(0,sy);});
+}
+
+function mkCard(m,fc){
+  var div=document.createElement('div');
+  var isF=m.tp==='F';
+  var isSel=APP.sel.has(m.id);
+  var totalUsed=allUsedMin(), shellTotal=capMax();
+  /* Only gray out: Coming Soon modules, or modules that would push total OVER the shell limit */
+  var wouldOverflow=!isSel&&shellTotal>0&&(totalUsed+m.dur>shellTotal);
+  var dis=isF||wouldOverflow;
+
+  div.className='mc'+(isSel?' sel':'')+(dis?' dis':'');
+  div.style.cssText='--fc:'+fc;
+
+  var badges='';
+  if(m.dur>0) badges+='<span class="mb mb-dur">&#9201; '+m.dur+'m</span>';
+  if(m.lv) badges+='<span class="mb mb-lvl">'+m.lv+'</span>';
+  if(m.tp==='B') badges+='<span class="mb mb-found">FOUNDATION</span>';
+  if(isF) badges+='<span class="mb mb-soon">Coming Soon</span>';
+
+  div.innerHTML=
+    '<div class="mc-chk">&#10003;</div>'+
+    '<div class="mc-hd">'+
+      '<span class="mc-id" style="background:'+fc+'22;color:'+fc+'">'+m.id+'</span>'+
+      '<span class="mc-title">'+m.t+'</span>'+
+    '</div>'+
+    '<div class="mc-meta">'+badges+'</div>'+
+    '<div class="mc-desc">'+m.d+'</div>';
+
+  if(!isF){
+    (function(id){
+      div.onclick=function(){toggleMod(id);};
+    })(m.id);
+  }
+  return div;
+}
+
+function toggleMod(id){
+  var mod=MODS.find(function(m){return m.id===id;});
+  if(!mod||mod.tp==='F') return;  /* Coming Soon = not interactive */
+
+  if(APP.sel.has(id)){
+    /* Deselect — no cascade, user is in control */
+    APP.sel.delete(id);
+  } else {
+    /* Only hard-block when the shell time is genuinely full */
+    var totalUsed=allUsedMin(), shellTotal=capMax();
+    if(shellTotal>0&&totalUsed+mod.dur>shellTotal){
+      var rem=shellTotal-totalUsed;
+      toast('\u26D4 Shell is full ('+(rem>0?rem+'m left':'no time left')+') \u2014 deselect a topic to make room.','warn');
+      return;
+    }
+    APP.sel.add(id);
+  }
+  renderMods();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STEP 4: WORKSHOP
+══════════════════════════════════════════════════════════════ */
+function renderWS(){
+  var shell=SHELLS[APP.day];
+  var elecs=getElectives();
+  document.getElementById('ws-sub').textContent=
+    shell.title+' \u00B7 '+elecs.length+' add-on module'+(elecs.length!==1?'s':'')+' \u00B7 '+shell.total/60+' hours';
+
+  var t=0, ei=0, rows=[];
+  shell.agenda.forEach(function(item){
+    if(item.tp==='eslot'){
+      if(ei<elecs.length){
+        var e=elecs[ei++];
+        rows.push({tp:'e',lbl:e.t,dur:Math.min(e.dur,item.dur),t:t});
+        t+=Math.min(e.dur,item.dur);
+      }
+    } else if(item.tp==='core'){
+      /* Only include Foundation modules that are actually selected */
+      if(!item.id||APP.sel.has(item.id)){
+        rows.push({tp:item.tp,lbl:item.lbl,dur:item.dur,t:t});
+        t+=item.dur;
+      }
+    } else {
+      rows.push({tp:item.tp,lbl:item.lbl,dur:item.dur,t:t});
+      t+=item.dur;
+    }
+  });
+
+  var agHtml=rows.map(function(r){
+    var h=Math.floor(r.t/60), m=r.t%60;
+    var ts=h+':'+(m<10?'0':'')+m;
+    var tc='tag-core', tl='CORE';
+    if(r.tp==='e'){tc='tag-e';tl='ADD-ON';}
+    else if(r.tp==='brk'){tc='tag-brk';tl='BREAK';}
+    else if(r.tp==='act'){tc='tag-act';tl='ACTIVITY';}
+    return '<div class="ag-item">'+
+      '<span class="ag-time">'+ts+'</span>'+
+      '<span class="ag-tag '+tc+'">'+tl+'</span>'+
+      '<span class="ag-name">'+r.lbl+'</span>'+
+      '<span class="ag-dur">'+r.dur+'m</span>'+
+    '</div>';
+  }).join('');
+
+  /* Show LOs for all selected modules that have them, in catalog order */
+  var ocHtml=MODS.filter(function(m){return APP.sel.has(m.id)&&m.lo&&m.tp!=='F';}).map(function(m){
+    return '<div class="oc-item">'+
+      '<div class="oc-mod">'+m.id+' \u2014 '+m.t+'</div>'+
+      '<div class="oc-lo">'+m.lo+'</div>'+
+    '</div>';
+  }).join('');
+
+  document.getElementById('ws-grid').innerHTML=
+    '<div class="ws-panel"><h3>&#128197; Custom Agenda \u2014 '+shell.title+'</h3>'+agHtml+'</div>'+
+    '<div class="ws-panel"><h3>&#127919; Learning Outcomes</h3>'+
+    (ocHtml||'<p style="color:var(--muted);font-size:12px;padding-top:8px;">No add-on modules selected \u2014 foundation outcomes only.</p>')+
+    '</div>';
+
+  document.getElementById('ws-next').innerHTML=
+    '<div class="next-panel">'+
+      '<div class="next-title">&#9889; What Happens After Delivery (Steps 7\u201311)</div>'+
+      '<div class="next-steps">'+
+        '<div class="ns"><div class="ns-n">7</div><div class="ns-t"><strong>Pre-Survey</strong> \u2014 Deploy confidence baseline 1\u20132 weeks before the workshop using the LOs from this agenda.</div></div>'+
+        '<div class="ns"><div class="ns-n">8</div><div class="ns-t"><strong>Deliver</strong> \u2014 Run sessions with real client work as the activity fuel. Learners leave with progress on actual tasks.</div></div>'+
+        '<div class="ns"><div class="ns-n">9</div><div class="ns-t"><strong>Post-Survey</strong> \u2014 Same template, same LOs. Deployed at end of session before learners log off.</div></div>'+
+        '<div class="ns"><div class="ns-n">10</div><div class="ns-t"><strong>30-Day Follow-Up</strong> \u2014 Did they use it on the job? Transfer questions + same LO battery.</div></div>'+
+        '<div class="ns"><div class="ns-n">11</div><div class="ns-t"><strong>Delta Report</strong> \u2014 Pre / Post / 30-day comparison tied to client success criteria and Kirkpatrick Levels 1\u20133.</div></div>'+
+      '</div>'+
+    '</div>';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════════ */
+function toast(msg, type){
+  type=type||'info';
+  var c=document.getElementById('toasts');
+  var el=document.createElement('div');
+  el.className='toast'+(type==='warn'?' warn':'');
+  el.textContent=msg;
+  c.appendChild(el);
+  setTimeout(function(){
+    el.style.animation='slideOut .28s ease forwards';
+    setTimeout(function(){if(el.parentNode)el.remove();},280);
+  },3200);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   KEYBOARD
+══════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.key==='ArrowRight') advance();
+  if(e.key==='ArrowLeft'&&APP.step>0) go(APP.step-1);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════ */
+document.getElementById('s0').classList.add('active');
+renderHdr();
+renderNav();
+</script>
+</body>
+</html>
