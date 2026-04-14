@@ -905,11 +905,6 @@ function slotInfo(){
   return {count:slots.length, totalMin:totalMin, slots:slots};
 }
 
-function prereqOk(mod){
-  return mod.pre.every(function(p){
-    return APP.sel.has(p);
-  });
-}
 
 function updateCapBar(){
   var used=allUsedMin(), cap=capMax();
@@ -969,10 +964,9 @@ function mkCard(m,fc){
   var isF=m.tp==='F';
   var isSel=APP.sel.has(m.id);
   var elecUsed=electMin(), elecCap=capMax();
-  /* Gray out: Coming Soon, electives that would bust the add-on budget, or unmet prereqs */
+  /* Gray out: Coming Soon, or electives that would bust the add-on budget */
   var wouldOverflow=!isSel&&m.tp==='E'&&elecCap>0&&(elecUsed+m.dur>elecCap);
-  var missingPrereq=!isSel&&m.tp==='E'&&!prereqOk(m);
-  var dis=isF||wouldOverflow||missingPrereq;
+  var dis=isF||wouldOverflow;
 
   div.className='mc'+(isSel?' sel':'')+(dis?' dis':'');
   div.style.cssText='--fc:'+fc;
@@ -982,7 +976,6 @@ function mkCard(m,fc){
   if(m.lv) badges+='<span class="mb mb-lvl">'+m.lv+'</span>';
   if(m.tp==='B') badges+='<span class="mb mb-found">FOUNDATION</span>';
   if(isF) badges+='<span class="mb mb-soon">Coming Soon</span>';
-  if(missingPrereq&&!isF) badges+='<span class="mb" style="background:#8B1D2920;color:#8B1D29;font-size:10px;">Requires '+m.pre.join(', ')+'</span>';
 
   div.innerHTML=
     '<div class="mc-chk">&#10003;</div>'+
@@ -1006,20 +999,8 @@ function toggleMod(id){
   if(!mod||mod.tp==='F') return;  /* Coming Soon = not interactive */
 
   if(APP.sel.has(id)){
-    /* Deselect — warn if other selected modules depend on this one */
-    var dependents=MODS.filter(function(m){return APP.sel.has(m.id)&&m.pre.indexOf(id)!==-1;});
-    if(dependents.length>0){
-      toast('\u26A0 '+dependents.map(function(d){return d.id;}).join(', ')+' require'+
-        (dependents.length===1?'s':'')+' '+id+' as a prerequisite.','warn');
-    }
     APP.sel.delete(id);
   } else {
-    /* Check prerequisites */
-    if(mod.tp==='E'&&!prereqOk(mod)){
-      var missing=mod.pre.filter(function(p){return !APP.sel.has(p);});
-      toast('\u26D4 Requires '+missing.join(', ')+' \u2014 select '+(missing.length>1?'them':'it')+' first.','warn');
-      return;
-    }
     /* Block when elective budget is full (for elective modules) */
     if(mod.tp==='E'){
       var elecUsed=electMin(), elecCap=capMax();
@@ -1028,11 +1009,11 @@ function toggleMod(id){
         toast('\u26D4 Add-on time full ('+(rem>0?rem+'m left':'no time left')+') \u2014 deselect a module to make room.','warn');
         return;
       }
-      /* Also warn if more modules than slots */
+      /* Warn if more modules than slots */
       var info=slotInfo();
       var currentElecCount=getElectives().length;
       if(currentElecCount>=info.count){
-        toast('\u26A0 All '+info.count+' slot'+(info.count!==1?'s':'')+' filled \u2014 adding anyway, but the last module'+(currentElecCount>=info.count?'s':'')+ ' may not fit the agenda.','warn');
+        toast('\u26A0 All '+info.count+' slot'+(info.count!==1?'s':'')+' filled \u2014 adding anyway, but the last module may not fit the agenda.','warn');
       }
     }
     APP.sel.add(id);
