@@ -220,6 +220,7 @@ body{
 
 .ws-panel h3{font-size:14px;font-weight:800;color:var(--H);margin-bottom:13px;}
 .ag-item{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);}
+.ag-item.empty-slot{opacity:0.5;font-style:italic;}
 .ag-time{font-size:10px;font-weight:700;color:var(--muted);min-width:38px;padding-top:3px;font-variant-numeric:tabular-nums;}
 .ag-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-top:3px;letter-spacing:.04em;}
 .tag-core{background:rgba(15,27,55,.08);color:var(--H);}
@@ -498,11 +499,11 @@ const SHELLS = {
       { tp:'core', id:'F3', lbl:'Prompt Engineering TRACI+ (compressed)', dur:35 },
       { tp:'brk',           lbl:'Break',                                  dur:10 },
       { tp:'core', id:'F4', lbl:'Context Engineering (compressed)',       dur:45 },
-      { tp:'core', id:'F5', lbl:'Capstone: Build Something (mini)',       dur:45 },
+      { tp:'eslot',         lbl:'Module Slot 1',                          dur:30 },
+      { tp:'eslot',         lbl:'Module Slot 2',                          dur:30 },
       { tp:'brk',           lbl:'Break',                                  dur:10 },
-      { tp:'act',           lbl:'Show & Tell / Debrief',                  dur:30 },
+      { tp:'core', id:'F5', lbl:'Capstone: Build Something (mini)',       dur:25 },
       { tp:'core', id:'F6', lbl:'Closing & Action Planning',              dur:15 },
-      { tp:'act',           lbl:'Post-Survey + Resources',                dur:10 },
     ]
   },
   '6h':{ label:'Full Day', title:'6-Hour Day', color:'#DF6526',
@@ -867,8 +868,8 @@ function renderDays(){
       '<div class="dc-use">'+s.desc+'</div>'+
       '<div class="dc-nums">'+
         '<div><div class="dn-v" style="color:'+s.color+'">'+(s.total/60)+'h</div><div class="dn-l">Total</div></div>'+
-        '<div><div class="dn-v" style="color:'+s.color+'">'+(s.total/60)+'h</div><div class="dn-l">Available</div></div>'+
-        '<div><div class="dn-v" style="color:'+s.color+'">'+s.elec+'m</div><div class="dn-l">Add-on time</div></div>'+
+        '<div><div class="dn-v" style="color:'+s.color+'">'+(s.core)+'m</div><div class="dn-l">Core</div></div>'+
+        '<div><div class="dn-v" style="color:'+s.color+'">'+s.elec+'m</div><div class="dn-l">Add-on slots</div></div>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -888,11 +889,21 @@ function getElectives(){
 function electMin(){
   return getElectives().reduce(function(s,m){return s+m.dur;},0);
 }
-/* Total of ALL selected modules (Foundation + add-ons) for cap bar display */
+/* Elective time used — only count add-on modules, not Foundation */
 function allUsedMin(){
-  return MODS.filter(function(m){return APP.sel.has(m.id)&&m.tp!=='F';}).reduce(function(s,m){return s+m.dur;},0);
+  return electMin();
 }
-function capMax(){ return APP.day?SHELLS[APP.day].total:0; }
+/* Elective budget for the current shell */
+function capMax(){ return APP.day?SHELLS[APP.day].elec:0; }
+
+/* Count available elective slots and their total capacity */
+function slotInfo(){
+  if(!APP.day) return {count:0, totalMin:0, slots:[]};
+  var shell=SHELLS[APP.day];
+  var slots=shell.agenda.filter(function(item){return item.tp==='eslot';});
+  var totalMin=slots.reduce(function(s,sl){return s+sl.dur;},0);
+  return {count:slots.length, totalMin:totalMin, slots:slots};
+}
 
 function prereqOk(mod){
   return mod.pre.every(function(p){
@@ -902,16 +913,28 @@ function prereqOk(mod){
 
 function updateCapBar(){
   var used=allUsedMin(), cap=capMax();
+  var info=slotInfo();
   var pct=cap>0?Math.min(100,used/cap*100):0;
   var full=cap>0&&used>=cap;
+  var over=used>cap;
   var bar=document.getElementById('cap-bar');
   var txt=document.getElementById('cap-txt');
   var sel=document.getElementById('cap-sel');
   bar.style.width=pct+'%';
-  bar.className='cap-bar'+(full?' ful':pct>=88?' d':pct>=65?' w':'');
+  bar.className='cap-bar'+(over?' ful':full?' ful':pct>=88?' d':pct>=65?' w':'');
   var rem=cap-used;
-  txt.textContent=cap>0?(used+' / '+cap+' min'+(full?' \u2014 Full':rem>0?' ('+rem+'m left)':'')):' ';
-  txt.className='cap-txt'+(full?' ful':'');
+  var elecCount=getElectives().length;
+  if(cap>0){
+    var label=used+' / '+cap+' min add-on time';
+    if(over) label+=' \u2014 Over by '+(used-cap)+'m';
+    else if(full) label+=' \u2014 Full';
+    else if(rem>0) label+=' ('+rem+'m left)';
+    if(elecCount>info.count) label+=' \u00B7 \u26A0 '+elecCount+' modules for '+info.count+' slot'+(info.count!==1?'s':'');
+    txt.textContent=label;
+  } else {
+    txt.textContent=' ';
+  }
+  txt.className='cap-txt'+(full||over?' ful':'');
   var tot=MODS.filter(function(m){return APP.sel.has(m.id)&&m.tp!=='F';}).length;
   sel.textContent=tot?(tot+' topic'+(tot>1?'s':'')+' selected'):'';
 }
@@ -945,10 +968,11 @@ function mkCard(m,fc){
   var div=document.createElement('div');
   var isF=m.tp==='F';
   var isSel=APP.sel.has(m.id);
-  var totalUsed=allUsedMin(), shellTotal=capMax();
-  /* Only gray out: Coming Soon modules, or modules that would push total OVER the shell limit */
-  var wouldOverflow=!isSel&&shellTotal>0&&(totalUsed+m.dur>shellTotal);
-  var dis=isF||wouldOverflow;
+  var elecUsed=electMin(), elecCap=capMax();
+  /* Gray out: Coming Soon, electives that would bust the add-on budget, or unmet prereqs */
+  var wouldOverflow=!isSel&&m.tp==='E'&&elecCap>0&&(elecUsed+m.dur>elecCap);
+  var missingPrereq=!isSel&&m.tp==='E'&&!prereqOk(m);
+  var dis=isF||wouldOverflow||missingPrereq;
 
   div.className='mc'+(isSel?' sel':'')+(dis?' dis':'');
   div.style.cssText='--fc:'+fc;
@@ -958,6 +982,7 @@ function mkCard(m,fc){
   if(m.lv) badges+='<span class="mb mb-lvl">'+m.lv+'</span>';
   if(m.tp==='B') badges+='<span class="mb mb-found">FOUNDATION</span>';
   if(isF) badges+='<span class="mb mb-soon">Coming Soon</span>';
+  if(missingPrereq&&!isF) badges+='<span class="mb" style="background:#8B1D2920;color:#8B1D29;font-size:10px;">Requires '+m.pre.join(', ')+'</span>';
 
   div.innerHTML=
     '<div class="mc-chk">&#10003;</div>'+
@@ -981,15 +1006,34 @@ function toggleMod(id){
   if(!mod||mod.tp==='F') return;  /* Coming Soon = not interactive */
 
   if(APP.sel.has(id)){
-    /* Deselect — no cascade, user is in control */
+    /* Deselect — warn if other selected modules depend on this one */
+    var dependents=MODS.filter(function(m){return APP.sel.has(m.id)&&m.pre.indexOf(id)!==-1;});
+    if(dependents.length>0){
+      toast('\u26A0 '+dependents.map(function(d){return d.id;}).join(', ')+' require'+
+        (dependents.length===1?'s':'')+' '+id+' as a prerequisite.','warn');
+    }
     APP.sel.delete(id);
   } else {
-    /* Only hard-block when the shell time is genuinely full */
-    var totalUsed=allUsedMin(), shellTotal=capMax();
-    if(shellTotal>0&&totalUsed+mod.dur>shellTotal){
-      var rem=shellTotal-totalUsed;
-      toast('\u26D4 Shell is full ('+(rem>0?rem+'m left':'no time left')+') \u2014 deselect a topic to make room.','warn');
+    /* Check prerequisites */
+    if(mod.tp==='E'&&!prereqOk(mod)){
+      var missing=mod.pre.filter(function(p){return !APP.sel.has(p);});
+      toast('\u26D4 Requires '+missing.join(', ')+' \u2014 select '+(missing.length>1?'them':'it')+' first.','warn');
       return;
+    }
+    /* Block when elective budget is full (for elective modules) */
+    if(mod.tp==='E'){
+      var elecUsed=electMin(), elecCap=capMax();
+      if(elecCap>0&&elecUsed+mod.dur>elecCap){
+        var rem=elecCap-elecUsed;
+        toast('\u26D4 Add-on time full ('+(rem>0?rem+'m left':'no time left')+') \u2014 deselect a module to make room.','warn');
+        return;
+      }
+      /* Also warn if more modules than slots */
+      var info=slotInfo();
+      var currentElecCount=getElectives().length;
+      if(currentElecCount>=info.count){
+        toast('\u26A0 All '+info.count+' slot'+(info.count!==1?'s':'')+' filled \u2014 adding anyway, but the last module'+(currentElecCount>=info.count?'s':'')+ ' may not fit the agenda.','warn');
+      }
     }
     APP.sel.add(id);
   }
@@ -1005,13 +1049,19 @@ function renderWS(){
   document.getElementById('ws-sub').textContent=
     shell.title+' \u00B7 '+elecs.length+' add-on module'+(elecs.length!==1?'s':'')+' \u00B7 '+shell.total/60+' hours';
 
-  var t=0, ei=0, rows=[];
+  var t=0, ei=0, rows=[], droppedElecs=[];
   shell.agenda.forEach(function(item){
     if(item.tp==='eslot'){
       if(ei<elecs.length){
         var e=elecs[ei++];
-        rows.push({tp:'e',lbl:e.t,dur:Math.min(e.dur,item.dur),t:t});
-        t+=Math.min(e.dur,item.dur);
+        /* Use the elective's actual duration so content isn't silently clipped */
+        var useDur=e.dur;
+        rows.push({tp:'e',lbl:e.t,dur:useDur,t:t,slotDur:item.dur});
+        t+=useDur;
+      } else {
+        /* Empty slot — show as available */
+        rows.push({tp:'empty',lbl:'(Open slot \u2014 available)',dur:item.dur,t:t});
+        t+=item.dur;
       }
     } else if(item.tp==='core'){
       /* Only include Foundation modules that are actually selected */
@@ -1024,21 +1074,37 @@ function renderWS(){
       t+=item.dur;
     }
   });
+  /* Track any electives that didn't fit into available slots */
+  while(ei<elecs.length){ droppedElecs.push(elecs[ei++]); }
 
   var agHtml=rows.map(function(r){
     var h=Math.floor(r.t/60), m=r.t%60;
     var ts=h+':'+(m<10?'0':'')+m;
     var tc='tag-core', tl='CORE';
     if(r.tp==='e'){tc='tag-e';tl='ADD-ON';}
+    else if(r.tp==='empty'){tc='tag-brk';tl='OPEN';}
     else if(r.tp==='brk'){tc='tag-brk';tl='BREAK';}
     else if(r.tp==='act'){tc='tag-act';tl='ACTIVITY';}
-    return '<div class="ag-item">'+
+    var timeNote='';
+    if(r.tp==='e'&&r.slotDur&&r.dur>r.slotDur){
+      timeNote=' <span style="color:#DF6526;font-size:11px;font-weight:600;">\u26A0 exceeds slot by '+(r.dur-r.slotDur)+'m</span>';
+    }
+    return '<div class="ag-item'+(r.tp==='empty'?' empty-slot':'')+'">'+
       '<span class="ag-time">'+ts+'</span>'+
       '<span class="ag-tag '+tc+'">'+tl+'</span>'+
-      '<span class="ag-name">'+r.lbl+'</span>'+
+      '<span class="ag-name">'+r.lbl+timeNote+'</span>'+
       '<span class="ag-dur">'+r.dur+'m</span>'+
     '</div>';
   }).join('');
+
+  /* Warning for dropped electives */
+  if(droppedElecs.length>0){
+    agHtml+='<div style="margin-top:12px;padding:10px 14px;background:#8B1D2918;border-left:3px solid #8B1D29;border-radius:6px;font-size:13px;color:#8B1D29;">'+
+      '<strong>\u26A0 '+droppedElecs.length+' module'+(droppedElecs.length>1?'s':'')+' could not be scheduled</strong> \u2014 not enough slots in this shell.<br>'+
+      droppedElecs.map(function(e){return e.id+' '+e.t+' ('+e.dur+'m)';}).join(', ')+
+      '<br><span style="font-size:12px;color:#6b7280;">Consider switching to a longer day shell or deselecting some modules.</span>'+
+    '</div>';
+  }
 
   /* Show LOs for all selected modules that have them, in catalog order */
   var ocHtml=MODS.filter(function(m){return APP.sel.has(m.id)&&m.lo&&m.tp!=='F';}).map(function(m){
